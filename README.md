@@ -2,7 +2,7 @@
 Start additional qbittorrent instances from disk snapshots without manually adding torrents again(for seeding)
 
 background&test result(may not fit for everyone):
-![image.png](https://i.loli.net/2020/08/03/X275ZxYwan9TWlC.png)
+![image.png](https://i.loli.net/2020/08/03/tYveVgnPKoSl7XB.png)
 
 requires:
     torrent stored at subdirectories in /media
