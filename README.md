@@ -14,6 +14,8 @@ usage:
 ```
     qbitsnapshot.sh -a <qb-cpu-affinity> -o </path-to-overlay-file> [-s <overlay-size-in-gib>] -d <source-disk-e.g.-/dev/sda3> -m <mountpoint-e.g.-/mnt/loop1> -p <qb-webui-port>
 ```
-script automatically restart qbit and recreate snapshot everyday for updates of new torrents.
+Script automatically restart qbit and recreate snapshot everyday for updates of new torrents.
 
-PS. sometimes script will report fsck and fs corrupt, that's an expected situation, just ignore and all modifications are NOT written to original disks.
+PS: 
+*    Sometimes script will report fsck and fs corrupt, that's an expected situation, just ignore and all modifications are NOT written to original disks.
+*    Do NOT upload torrents to snapshoted qbit and do NOT download anything with it since all modifications are NOT written to original disks.
