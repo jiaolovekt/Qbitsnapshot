@@ -5,9 +5,9 @@ background&test result(may not fit for everyone):
 ![image.png](https://i.loli.net/2020/08/03/tYveVgnPKoSl7XB.png)
 
 requires:
-    torrent stored at subdirectories in /media
-    qbittorrent installed and added to PATH
-    a few gib space for overlay file
+*    torrent stored at subdirectories in /media
+*    qbittorrent installed and added to PATH
+*    a few gib space for overlay file
     
 usage:
 ```
