@@ -1,8 +1,10 @@
 # Qbitsnapshot
-Start additional qbittorrent instances from disk snapshots without manually adding torrents again(for seeding)
+Start additional qbittorrent instances from disk snapshots without manually adding torrents again(for seeding).
 
 background&test result(still testing,may not fit for everyone,may not precise.):
 ![image.png](https://i.loli.net/2020/08/03/tYveVgnPKoSl7XB.png)
+from 2x Hetzner 32G 3TBx2
+seeding seems improved when running more processes
 
 requires:
 *    torrent stored at subdirectories in /media
@@ -17,5 +19,5 @@ usage:
 Script automatically restart qbit and recreate snapshot everyday for updates of new torrents.
 
 PS: 
-*    Sometimes script will report fsck and fs corrupt, that's an expected situation, just ignore and all modifications are NOT written to original disks.
+*    Sometimes script will report fsck and fs corrupt, that's an expected situation, just ignore since all modifications are NOT written to original disks.
 *    Do NOT upload torrents to snapshoted qbit and do NOT download anything with it since all modifications are NOT written to original disks.
