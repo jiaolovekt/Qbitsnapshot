@@ -10,4 +10,4 @@ requires:
     a few gib space for overlay file
     
 usage:
-    usage qbitsnapshot.sh -a <qb-cpu-affinity> -o </path-to-overlay-file> [-s <overlay-size-in-gib>] -d <source-disk-e.g.-/dev/sda3> -m <mountpoint-e.g.-/mnt/loop1> -p <qb-webui-port>
+    qbitsnapshot.sh -a <qb-cpu-affinity> -o </path-to-overlay-file> [-s <overlay-size-in-gib>] -d <source-disk-e.g.-/dev/sda3> -m <mountpoint-e.g.-/mnt/loop1> -p <qb-webui-port>
