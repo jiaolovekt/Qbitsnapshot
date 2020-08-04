@@ -77,7 +77,7 @@ cleanup()
 {
 echo umount $Qmountpoint
 umount $Qmountpoint/* || true
-umount $Qmountpoint
+umount -R $Qmountpoint
 echo removing $Qmapperdev
 dmsetup remove $Qmapperdev
 echo removing $Qsrcloop $Qoverlayloop
