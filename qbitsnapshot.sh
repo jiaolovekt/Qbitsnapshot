@@ -63,7 +63,7 @@ fi
 mount --bind /dev $Qmountpoint/dev
 mount -t proc proc $Qmountpoint/proc
 mount -t sysfs sys $Qmountpoint/sys
-mount --rbind -o ro "$Qseedingdir" "$Qmountpoint""$Qseedingdir"	# seems ro not working
+mount --bind -o ro "$Qseedingdir" "$Qmountpoint""$Qseedingdir"
 }
 
 startqbit()
