@@ -1,6 +1,6 @@
 #!/bin/bash
 #usage qbitsnapshot.sh -a <affinity> -d </tempdir-not-in-"/"> [-t <time-before-restart>] [-s </seeding/dir>] -m </mountpoint> -p <webui-port>
-set -e
+#set -e
 #set -x
 
 init_var()
@@ -18,7 +18,7 @@ Qseedingdir=/media
 
 Qhelp()
 {
-echo "qbitsnapshot.sh -a <affinity> -d </tempdir-not-in-"/"> [-t <time-before-restart>] [-s </seeding/dir>] -m </mountpoint> -p <webui-port>" 
+echo "usage qbitsnapshot.sh -a <affinity> -d </tempdir-not-in-"/"> [-t <time-before-restart>] [-s </seeding/dir>] -m </mountpoint> -p <webui-port>" 
 }
 
 init_overlay()
