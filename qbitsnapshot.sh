@@ -1,126 +1,101 @@
 #!/bin/bash
-#usage qbitsnapshot.sh -a <affinity> -o </overlay-path> [-s <overlay size in gib>] -d </dev/sda3> -m </mnt/loop1> -p <webui-port>
+#usage qbitsnapshot.sh -a <affinity> -d </tempdir-not-in-"/"> [-t <time-before-restart>] [-s </seeding/dir>] -m </mountpoint> -p <webui-port>
 set -e
 #set -x
 
 init_var()
 {
 Qaffinity=
-Qoverlayname="/Qoverlay$$"
-Qoverlayfile=
-Qoverlaypath=
-Qoverlaysize=8
-Qsrcdisk=
+Qoverlaydir=
 Qmountpoint=
 Qsrcloop=
 Qoverlayloop=
-Qmapperdev=qb$$
 Qport=1234
-Qrestartduration=86400	# modify if needed
-Qseedingdir=/media		# modify if needed
-countA=1
+Qrestartduration=86400	
+Qseedingdir=/media		
 }
-callexit()
-{
-echo SIG received
-cleanup
-exit 0
-}
+
 
 Qhelp()
 {
-echo "usage qbitsnapshot.sh -a <affinity> -o </overlay-path> [-s <overlay size in gib>] -d </dev/sda3> -m </mnt/loop1> -p <webui-port>" 
+echo "qbitsnapshot.sh -a <affinity> -d </tempdir-not-in-"/"> [-t <time-before-restart>] [-s </seeding/dir>] -m </mountpoint> -p <webui-port>" 
 }
 
-init_loops()
+init_overlay()
 {
-Qoverlayfile="$Qoverlaypath"$Qoverlayname
-Qsrcloop=`losetup -r -f --show "$Qsrcdisk"` 
-truncate -s "$Qoverlaysize"G "$Qoverlayfile" 
-Qoverlayloop=`losetup -f --show "$Qoverlayfile"` 
-echo "source disk is $Qsrcdisk , source loop device is $Qsrcloop , overlay device is $Qoverlayloop ."
+Qoverlaylower="$Qoverlaydir/Qlo$$"
+Qoverlayupper="$Qoverlaydir/Qup$$"
+Qoverlaywd="$Qoverlaydir/Qwd$$"
+mkdir $Qoverlaylower
+mkdir $Qoverlayupper
+mkdir $Qoverlaywd
 trap "cleanup" TERM
-}
-
-init_snapshot()
-{
-read -r -n 1 -t 5 -p "setting dmsetup in 5 seconds" || true
-if dmsetup create $Qmapperdev --table "0 `blockdev --getsize $Qsrcdisk` snapshot $Qsrcloop $Qoverlayloop P 8" ; then
-	echo -e "\ndmsetup success, mapper dev is $Qmapperdev"
+echo setting up ro sourcemount in 5 sec && sleep 5
+mount --bind --make-private -o ro / "$Qoverlaylower"
+echo setting up overlay in 3 sec && sleep 3
+if mount -t overlay overlay -o upperdir="$Qoverlayupper",lowerdir="$Qoverlaylower",workdir="$Qoverlaywd" "$Qmountpoint"; then
+	echo overlay success
 else
-	echo dmsetup failed.
+	echo mount failed, check temp dir should NOT in mountpoint /.
 	exit 6
 fi
-}
-
-fscknmount()
-{
-[ -d "$Qmountpoint" ] || mkdir -p $Qmountpoint
-sync
-if mount /dev/mapper/$Qmapperdev $Qmountpoint ; then
-	echo mount snapshot success;
-else
-	echo mount $Qmapperdev failed. maybe need fsck.
-	sync
-	fsck.ext4 -y /dev/mapper/$Qmapperdev || true
-	sync
-	if mount /dev/mapper/$Qmapperdev $Qmountpoint ; then
-		echo mount success after fsck.
-	else
-		echo mount failed.
-		exit 7
-	fi
-fi
-mount --bind /dev $Qmountpoint/dev
-mount -t proc proc $Qmountpoint/proc
-mount -t sysfs sys $Qmountpoint/sys
-mount --bind -o ro $Qseedingdir $Qmountpoint$Qseedingdir	
-mount --bind -o ro /media/cdrom0 $Qmountpoint/media/cdrom0	
-mount --bind -o ro /media/cdrom1 $Qmountpoint/media/cdrom1	
+mount --bind /dev "$Qmountpoint"/dev
+mount -t proc proc "$Qmountpoint"/proc
+mount -t sysfs sys "$Qmountpoint"/sys
+mount --bind -o ro "$Qseedingdir" "$Qmountpoint""$Qseedingdir"	
+mount --bind -o ro /media/cdrom0 $Qmountpoint/media/cdrom0	# for test
+mount --bind -o ro /media/cdrom1 $Qmountpoint/media/cdrom1	# for test
 }
 
 startqbit()
 {
 read -r -n 1 -t 5 -p "Starting Qbit affinity $Qaffinity at port $Qport in 5 sec" || true
 date
-trap "callexit" QUIT
-chroot $Qmountpoint taskset $Qaffinity timeout -s 2 -k 600 $Qrestartduration qbittorrent-nox --webui-port=$Qport &
-Qpid=$!
-echo Qbit runnning at $Qpid
-wait $Qpid
+chroot "$Qmountpoint" taskset $Qaffinity timeout -s 2 -k 600 $Qrestartduration qbittorrent-nox --webui-port=$Qport & true
+Cpid=$! && Qpid=$((Cpid+1))
+echo chroot runnning at $Cpid
+wait $Cpid
 }
 
 cleanup()
 {
-[-n $Qpid] && kill -9 $Qpid
-echo umount $Qmountpoint
-umount $Qmountpoint/* || true
-umount -R $Qmountpoint || true
-echo removing $Qmapperdev
-dmsetup remove $Qmapperdev || echo no $Qmapperdev
-echo removing $Qsrcloop $Qoverlayloop
-losetup -d $Qsrcloop
-losetup -d $Qoverlayloop
-echo removing overlay file
-rm -f $Qoverlayfile
+[ -n "$Qpid" ] && kill -9 $Qpid
+echo try unmounting overlay.
+if umount -R "$Qmountpoint" ; then
+	echo umount success.
+else
+	echo umount failed, maybe Qbit still runnning
+	Qpid=`ps aux | grep qbit | grep $Qport | awk -F ' ' '{print $2}'`
+	if [ -z "$Qpid" ] ; then
+		echo qpid not found.
+		umount -R "$Qmountpoint"
+	else
+		echo killing Qbit runnning at $Qpid
+		kill -9 $Qpid
+		umount -R "$Qmountpoint"
+	fi
+fi
+echo umount ro sourcemount
+umount $Qoverlaylower
+[ "$Qoverlaydir" != "/" ] && rm -rf "$Qoverlaydir"
 echo cleanup done.
 }
 
 init_var
-while getopts "a:o:s:d:m:p:h" opt
+while getopts "a:d:t:s:m:p:h" opt
 do 
 	case $opt in
 		a)
 		Qaffinity="$OPTARG"
 		;;
-		o)
-		Qoverlaypath="$OPTARG"
+		d)
+		Qoverlaydir="$OPTARG"
+		;;
+		t)
+		Qrestartduration="$OPTARG"
 		;;
 		s)
-		Qoverlaysize="$OPTARG"
-		;;
-		d)
-		Qsrcdisk="$OPTARG"
+		Qseedingdir="$OPTARG"
 		;;
 		m)
 		Qmountpoint="$OPTARG"
@@ -141,23 +116,17 @@ if [ -z "$Qaffinity" ] ; then
 	echo "Affinity not set!"
 	exit 2
 fi
-if [ -z "$Qoverlaypath" ] ; then
-	echo "Overlay path not set!"
+if [ -z "$Qoverlaydir" ] ; then
+	echo "Overlay Upath not set!"
 	exit 3
-fi
-if [ -z "Qsrcdisk" ] ; then
-	echo "Src disk not set!"
-	exit 4
 fi
 if [ -z "Qmountpoint" ] ; then
 	echo "Mountpoint not set!"
-	exit 5
+	exit 4
 fi
 
 while true ; do
-	init_loops
-	init_snapshot
-	fscknmount
+	init_overlay
 	startqbit
 	cleanup
 	sleep 10
