@@ -1,12 +1,14 @@
 #!/bin/bash
-#usage qbitsnapshot.sh -a <affinity> -o </path-to-overlay-file> [-s <overlay size in gib>] -d </dev/sda3> -m </mnt/loop1> -p <webui-port>
+#usage qbitsnapshot.sh -a <affinity> -o </overlay-path> [-s <overlay size in gib>] -d </dev/sda3> -m </mnt/loop1> -p <webui-port>
 set -e
 #set -x
 
 init_var()
 {
 Qaffinity=
+Qoverlayname="/Qoverlay$$"
 Qoverlayfile=
+Qoverlaypath=
 Qoverlaysize=8
 Qsrcdisk=
 Qmountpoint=
@@ -16,26 +18,35 @@ Qmapperdev=qb$$
 Qport=1234
 Qrestartduration=86400	# modify if needed
 Qseedingdir=/media		# modify if needed
+countA=1
+}
+callexit()
+{
+echo SIG received
+cleanup
+exit 0
 }
 
 Qhelp()
 {
-echo "usage qbitsnapshot.sh -a <affinity> -o </path-to-overlay-file> [-s <overlay size in gib>] -d </dev/sda3> -m </mnt/loop1> -p <webui-port>" 
+echo "usage qbitsnapshot.sh -a <affinity> -o </overlay-path> [-s <overlay size in gib>] -d </dev/sda3> -m </mnt/loop1> -p <webui-port>" 
 }
 
 init_loops()
 {
+Qoverlayfile="$Qoverlaypath"$Qoverlayname
 Qsrcloop=`losetup -r -f --show "$Qsrcdisk"` 
 truncate -s "$Qoverlaysize"G "$Qoverlayfile" 
 Qoverlayloop=`losetup -f --show "$Qoverlayfile"` 
 echo "source disk is $Qsrcdisk , source loop device is $Qsrcloop , overlay device is $Qoverlayloop ."
+trap "cleanup" TERM
 }
 
 init_snapshot()
 {
 read -r -n 1 -t 5 -p "setting dmsetup in 5 seconds" || true
 if dmsetup create $Qmapperdev --table "0 `blockdev --getsize $Qsrcdisk` snapshot $Qsrcloop $Qoverlayloop P 8" ; then
-	echo dmsetup success, mapper dev is $Qmapperdev
+	echo -e "\ndmsetup success, mapper dev is $Qmapperdev"
 else
 	echo dmsetup failed.
 	exit 6
@@ -63,23 +74,30 @@ fi
 mount --bind /dev $Qmountpoint/dev
 mount -t proc proc $Qmountpoint/proc
 mount -t sysfs sys $Qmountpoint/sys
-mount --bind -o ro "$Qseedingdir" "$Qmountpoint""$Qseedingdir"
+mount --bind -o ro $Qseedingdir $Qmountpoint$Qseedingdir	
+mount --bind -o ro /media/cdrom0 $Qmountpoint/media/cdrom0	
+mount --bind -o ro /media/cdrom1 $Qmountpoint/media/cdrom1	
 }
 
 startqbit()
 {
 read -r -n 1 -t 5 -p "Starting Qbit affinity $Qaffinity at port $Qport in 5 sec" || true
 date
-chroot $Qmountpoint taskset $Qaffinity timeout -s 2 -k 600 $Qrestartduration qbittorrent-nox --webui-port=$Qport || true
+trap "callexit" QUIT
+chroot $Qmountpoint taskset $Qaffinity timeout -s 2 -k 600 $Qrestartduration qbittorrent-nox --webui-port=$Qport &
+Qpid=$!
+echo Qbit runnning at $Qpid
+wait $Qpid
 }
 
 cleanup()
 {
+[-n $Qpid] && kill -9 $Qpid
 echo umount $Qmountpoint
 umount $Qmountpoint/* || true
-umount -R $Qmountpoint
+umount -R $Qmountpoint || true
 echo removing $Qmapperdev
-dmsetup remove $Qmapperdev
+dmsetup remove $Qmapperdev || echo no $Qmapperdev
 echo removing $Qsrcloop $Qoverlayloop
 losetup -d $Qsrcloop
 losetup -d $Qoverlayloop
@@ -96,7 +114,7 @@ do
 		Qaffinity="$OPTARG"
 		;;
 		o)
-		Qoverlayfile="$OPTARG"
+		Qoverlaypath="$OPTARG"
 		;;
 		s)
 		Qoverlaysize="$OPTARG"
@@ -123,8 +141,8 @@ if [ -z "$Qaffinity" ] ; then
 	echo "Affinity not set!"
 	exit 2
 fi
-if [ -z "$Qoverlayfile" ] ; then
-	echo "Overlay file not set!"
+if [ -z "$Qoverlaypath" ] ; then
+	echo "Overlay path not set!"
 	exit 3
 fi
 if [ -z "Qsrcdisk" ] ; then
@@ -143,4 +161,7 @@ while true ; do
 	startqbit
 	cleanup
 	sleep 10
+	sync
+	sync
+	sync
 done
