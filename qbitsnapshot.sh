@@ -13,23 +13,31 @@ Qoverlayloop=
 Qport=1234
 Qrestartduration=86400	
 Qseedingdir=/media		
+Qusingtmpfs=0	#modify if needed
 }
 
 
 Qhelp()
 {
-echo "usage qbitsnapshot.sh -a <affinity> -d </tempdir-not-in-"/"> [-t <time-before-restart>] [-s </seeding/dir>] -m </mountpoint> -p <webui-port>" 
+echo "qbitsnapshot.sh -a <affinity> -d </tempdir-not-in-"/"> [-t <time-before-restart>] [-s </seeding/dir>] -m </mountpoint> -p <webui-port>" 
+}
+
+init_tmpfs()
+{
+[ -d "$Qoverlaydir" ] || mkdir -p "$Qoverlaydir"
+mount -t tmpfs -o size=4G tmpfs "$Qoverlaydir"
 }
 
 init_overlay()
 {
+[ $Qusingtmpfs = 1 ] && init_tmpfs
 Qoverlaylower="$Qoverlaydir/Qlo$$"
 Qoverlayupper="$Qoverlaydir/Qup$$"
 Qoverlaywd="$Qoverlaydir/Qwd$$"
 mkdir $Qoverlaylower
 mkdir $Qoverlayupper
 mkdir $Qoverlaywd
-trap "cleanup" TERM
+trap "callexit=1 && cleanup" TERM
 echo setting up ro sourcemount in 5 sec && sleep 5
 mount --bind --make-private -o ro / "$Qoverlaylower"
 echo setting up overlay in 3 sec && sleep 3
@@ -37,6 +45,7 @@ if mount -t overlay overlay -o upperdir="$Qoverlayupper",lowerdir="$Qoverlaylowe
 	echo overlay success
 else
 	echo mount failed, check temp dir should NOT in mountpoint /.
+	cleanup
 	exit 6
 fi
 mount --bind /dev "$Qmountpoint"/dev
@@ -53,7 +62,7 @@ read -r -n 1 -t 5 -p "Starting Qbit affinity $Qaffinity at port $Qport in 5 sec"
 date
 chroot "$Qmountpoint" taskset $Qaffinity timeout -s 2 -k 600 $Qrestartduration qbittorrent-nox --webui-port=$Qport & true
 Cpid=$! && Qpid=$((Cpid+1))
-echo chroot runnning at $Cpid
+echo chroot runnning at $Cpid Qbit running at $((Cpid+1))
 wait $Cpid
 }
 
@@ -76,7 +85,10 @@ else
 	fi
 fi
 echo umount ro sourcemount
-umount $Qoverlaylower
+umount -R $Qoverlaylower
+[ "$Qusingtmpfs" = 1 ] && umount -R $Qoverlaydir
+echo cleaning temp dir
+sleep 5
 [ "$Qoverlaydir" != "/" ] && rm -rf "$Qoverlaydir"
 echo cleanup done.
 }
