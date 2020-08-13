@@ -2,7 +2,7 @@
 #usage qbitsnapshot.sh -a <affinity> -d </tempdir-not-in-"/"> [-t <time-before-restart>] [-s </seeding/dir>] -m </mountpoint> -p <webui-port>
 #set -e
 #set -x
-
+#TODO: multiple instance need to be terminated and restarted
 init_var()
 {
 Qaffinity=
@@ -13,7 +13,7 @@ Qoverlayloop=
 Qport=1234
 Qrestartduration=86400	
 Qseedingdir=/media		
-Qusingtmpfs=0	#modify if needed
+Qusingtmpfs=1	#modify if needed
 }
 
 
@@ -24,6 +24,7 @@ echo "qbitsnapshot.sh -a <affinity> -d </tempdir-not-in-"/"> [-t <time-before-re
 
 init_tmpfs()
 {
+echo initing tmpfs
 [ -d "$Qoverlaydir" ] || mkdir -p "$Qoverlaydir"
 mount -t tmpfs -o size=4G tmpfs "$Qoverlaydir"
 }
@@ -85,14 +86,29 @@ else
 	fi
 fi
 echo umount ro sourcemount
+umount -R "$Qmountpoint"
+umount -R "$Qmountpoint"
+umount -R "$Qmountpoint"
+umount -R $Qoverlaylower
+umount -R $Qoverlaylower
 umount -R $Qoverlaylower
 [ "$Qusingtmpfs" = 1 ] && umount -R $Qoverlaydir
 echo cleaning temp dir
 sleep 5
 [ "$Qoverlaydir" != "/" ] && rm -rf "$Qoverlaydir"
 echo cleanup done.
+[ "$callexit" = "1"] && echo SIGTERM received && exit 0
 }
 
+callrestart()
+{
+
+}
+
+calledrestart()
+{
+
+}
 init_var
 while getopts "a:d:t:s:m:p:h" opt
 do 
