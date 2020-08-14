@@ -19,5 +19,5 @@ usage:
 Script automatically restart qbit and recreate snapshot everyday for updates of new torrents.
 
 PS: 
-*    Sometimes script will report fsck and fs corrupt, that's an expected situation, just ignore since all modifications are NOT written to original disks.
 *    Do NOT upload torrents to snapshoted qbit and do NOT download anything with it since all modifications are NOT written to original disks.
+*	 If using qbittorrent's auto add torrent the snapshot instances will add and hash new torrents automatically now.
