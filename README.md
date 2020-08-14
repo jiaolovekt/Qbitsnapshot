@@ -7,16 +7,15 @@ from 2x Hetzner 32G 3TBx2
 seeding seems improved when running more processes
 
 requires:
-*    torrent stored at subdirectories in /media
 *    qbittorrent installed and added to PATH
 *    a few gib space for overlay file
 *    user running original qbit and this script need to be the same.(read qbit configs from ~/.local)
     
 usage:
 ```
-    qbitsnapshot.sh -a <qb-cpu-affinity> -o </path-to-overlay-file> [-s <overlay-size-in-gib>] -d <source-disk-e.g.-/dev/sda3> -m <mountpoint-e.g.-/mnt/loop1> -p <qb-webui-port>
+    qbitsnapshot.sh -a <affinity> -d </tempdir-not-in-"/"> [-t <time-before-restart>] [-s </seeding/dir>] -m </mountpoint> -p <webui-port>
 ```
-Script automatically restart qbit and recreate snapshot everyday for updates of new torrents.
+Script automatically restart qbit and recreate snapshot everyday to avoid OOM
 
 PS: 
 *    Do NOT upload torrents to snapshoted qbit and do NOT download anything with it since all modifications are NOT written to original disks.
