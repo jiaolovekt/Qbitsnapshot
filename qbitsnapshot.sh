@@ -31,7 +31,7 @@ init_tmpfs()
 {
 echo initing tmpfs
 [ -d "$Qoverlaydir" ] || mkdir -p "$Qoverlaydir"
-mount -t tmpfs -o size=4G tmpfs "$Qoverlaydir"
+mount -t tmpfs -o size=1G tmpfs "$Qoverlaydir"
 }
 
 init_overlay()
@@ -121,13 +121,14 @@ echo cleaning temp dir
 sleep 5
 [ "$Qoverlaydir" != "/" ] && rm -rf "$Qoverlaydir"
 echo cleanup done.
-[ "$callexit" = "1"] && echo SIGTERM received && exit 0
+[ "$callexit" = "1" ] && echo SIGTERM received && exit 0
 }
 
 # when scheduled restart, request other instance restart aswell.
 callrestart()
 {
 # get other running process
+echo 0 $0 \$ $$  pid $Qpid
 local Qotherrunningpids=`ps aux | grep $0 | grep -v $$ | awk -F ' ' '{print $2}'`
 local Qotherrunningpidnum=`ps aux | grep $0 | grep -v $$ | wc -l`
 # SIG 14 to other process
