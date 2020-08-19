@@ -80,6 +80,8 @@ echo try unmounting overlay.
 local countA=0
 while true ; do
 	umount -R "$Qmountpoint"
+	umount -R "$Qmountpoint"
+	umount -R "$Qmountpoint"
 	sleep 1
 	let countA+=1
 	[ -z "`mount | grep overlay | grep $$`" ] && break
@@ -88,6 +90,10 @@ done
 local countB=0
 while true ; do
 	umount -R "$Qoverlaylower"
+	umount -R "$Qoverlaylower"
+	umount -R "$Qoverlaylower"
+	umount -R "$Qoverlaydir"
+	umount -R "$Qoverlaydir"
 	umount -R "$Qoverlaydir"
 	sleep 1
 	let countB+=1
@@ -131,6 +137,7 @@ callrestart()
 echo 0 $0 \$ $$  pid $Qpid
 local Qotherrunningpids=`ps aux | grep $0 | grep -v $$ | awk -F ' ' '{print $2}'`
 local Qotherrunningpidnum=`ps aux | grep $0 | grep -v $$ | wc -l`
+let Qotherrunningpidnum-=1
 # SIG 14 to other process
 [ -n "$Qotherrunningpids" ] && kill -s 14 ${Qotherrunningpids} || echo no other qb running continue to restart
 #wait other process killed

@@ -8,7 +8,7 @@ seeding seems improved when running more processes
 
 requires:
 *    qbittorrent installed and added to PATH
-*    a few gib space for overlay file
+*    a few gib space for overlay files (or tmpfs)
 *    user running original qbit and this script need to be the same.(read qbit configs from ~/.local)
     
 usage:
